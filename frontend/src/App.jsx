@@ -1,27 +1,29 @@
 import { useEffect, useMemo, useState } from "react";
 import { createProduct, deleteProduct, getProducts, updateProduct } from "./api/productsApi";
+import "../styles/main.scss";
 
-/**
- * Практика 4 (заготовка).
- * Важно: это НЕ готовое решение. В файле api/productsApi.js стоят TODO.
- * Цель: подключить React к вашему Express API и выполнить базовый CRUD.
- */
 export default function App() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Минимальная форма добавления товара
+  const [editingId, setEditingId] = useState(null);
+
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("");
+  const [description, setDescription] = useState("");
+  const [stock, setStock] = useState("");
+  const [rating, setRating] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
 
-  const canSubmit = useMemo(() => title.trim() !== "" && price !== "", [title, price]);
+  const canSubmit = useMemo(() => title.trim() !== "" && price !== "" && Number(price) > 0 && stock !== "", [title, price, stock]);
 
   async function load() {
     setError("");
     setLoading(true);
     try {
-      const data = await getProducts(); // TODO: заработает после реализации productsApi.js
+      const data = await getProducts();
       setItems(data);
     } catch (e) {
       setError(String(e?.message || e));
@@ -40,13 +42,36 @@ export default function App() {
 
     setError("");
     try {
-      await createProduct({
-        title: title.trim(),
-        // TODO (студентам): дополнить payload полями category/description/stock/...
-        price: Number(price),
-      });
+      if (editingId) {
+        await updateProduct(editingId, {
+          title: title.trim(),
+          price: Number(price),
+          category: category.trim(),
+          description: description.trim(),
+          stock: Number(stock),
+          rating: Number(rating),
+          imageUrl: imageUrl.trim()
+        });
+      } else {
+        await createProduct({
+          title: title.trim(),
+          price: Number(price),
+          category: category.trim(),
+          description: description.trim(),
+          stock: Number(stock),
+          rating: Number(rating),
+          imageUrl: imageUrl.trim()
+        });
+      }
+      // clear
       setTitle("");
       setPrice("");
+      setCategory("");
+      setDescription("");
+      setStock("");
+      setRating("");
+      setImageUrl("");
+      setEditingId(null);
       await load();
     } catch (e) {
       setError(String(e?.message || e));
@@ -74,68 +99,146 @@ export default function App() {
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: 24, fontFamily: "system-ui" }}>
-      <h1>Практика 4 — React + Express API</h1>
+    <div className="page">
+      <h1 className="page__title">Практика 4 — React + Express API</h1>
+      <section className="navigation">
+        <h2 className="navigation__title">Добавить товар</h2>
 
-      <p style={{ color: "#555" }}>
-        Если видите ошибку <code>TODO: реализуйте ...</code>, значит вы ещё не реализовали функции в{" "}
-        <code>src/api/productsApi.js</code>.
-      </p>
-
-      <section style={{ marginTop: 24, padding: 16, border: "1px solid #ddd", borderRadius: 12 }}>
-        <h2 style={{ marginTop: 0 }}>Добавить товар</h2>
-        <form onSubmit={onAdd} style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <form onSubmit={onAdd} className="navigation__form">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Название"
-            style={{ padding: 10, minWidth: 220 }}
+            className="input-title"
           />
+
           <input
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             placeholder="Цена"
             type="number"
-            style={{ padding: 10, width: 140 }}
+            className="input-price"
           />
-          <button disabled={!canSubmit} style={{ padding: "10px 14px" }}>
-            Добавить
-          </button>
-          <button type="button" onClick={load} style={{ padding: "10px 14px" }}>
-            Обновить список
-          </button>
+
+          <input
+            value={stock}
+            onChange={(e) => setStock(e.target.value)}
+            placeholder="Остаток на складе"
+            type="number"
+            className="input-stock"
+          />
+
+          <input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="Категория"
+            className="input-category"
+          />
+
+          <input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Описание"
+            className="input-description"
+          />
+
+          <input
+            value={rating}
+            onChange={(e) => setRating(e.target.value)}
+            placeholder="Рейтинг"
+            type="number"
+            className="input-rating"
+          />
+
+          <input
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            placeholder="URL изображения"
+            className="input-image-url"
+          />
+
+          <div className="navigation__buttons">
+            <button disabled={!canSubmit} className="button">
+              {editingId ? "Сохранить" : "Добавить"}
+            </button>
+
+            <button type="button" onClick={load} className="button">
+              Обновить список
+            </button>
+
+          </div>
         </form>
       </section>
 
-      <section style={{ marginTop: 24 }}>
-        <h2>Список товаров</h2>
+      <section className="section">
+        <h2 className="section__title">Список товаров</h2>
 
-        {loading && <p>Загрузка...</p>}
-        {error && (
-          <p style={{ color: "crimson" }}>
-            Ошибка: {error}
-            <br />
-            Проверьте, что: (1) backend запущен на 3000, (2) CORS настроен, (3) TODO в productsApi.js реализованы.
-          </p>
-        )}
+        <div className="container">
+          {loading && <p className="loading-text">Загрузка...</p>}
 
-        <ul style={{ paddingLeft: 18 }}>
-          {items.map((p) => (
-            <li key={p.id} style={{ marginBottom: 8 }}>
-              <b>{p.title}</b> — {p.price} ₽{" "}
-              <button onClick={() => onPricePlus(p.id, p.price)} style={{ marginLeft: 8 }}>
-                +10 ₽
-              </button>
-              <button onClick={() => onDelete(p.id)} style={{ marginLeft: 8 }}>
-                Удалить
-              </button>
-            </li>
-          ))}
-        </ul>
+          {error && (
+            <p className="error">
+              Ошибка: {error}
+              <br />
+              Проверьте, что: (1) backend запущен на 3000, (2) CORS настроен, (3) TODO в productsApi.js реализованы.
+            </p>
+          )}
 
-        <p style={{ color: "#555" }}>
-          TODO (студентам): добавить категории, описание, остаток на складе, картинку и т.п. + сделать красивый UI.
-        </p>
+          <ul className="list">
+            {items.map((p) => {
+              // determine whether image URL is present and non-empty
+              const hasImage = p.imageUrl && p.imageUrl.trim() !== "";
+              return (
+                <li
+                  key={p.id}
+                  className={`list-item ${hasImage ? "list-item__image" : "list-item__placeholder"}`}
+                  style={
+                    hasImage
+                      ? { backgroundImage: `url(${p.imageUrl})` }
+                      : undefined
+                  }
+                >
+                  <div className="list-item__wrap">
+                    <div className="list-item__text">
+                      <p>{p.title} — {p.price} ₽</p>
+                      <p>{p.description}</p>
+                      <p>Остаток: {p.stock}</p>
+                      <p>Рейтинг: {p.rating}</p>
+                    </div>
+
+                    <div className="list-item__buttons">
+                      {
+                        <button
+                          onClick={() => {
+                            setEditingId(p.id);
+                            setTitle(p.title);
+                            setPrice(p.price);
+                            setCategory(p.category);
+                            setDescription(p.description);
+                            setStock(p.stock);
+                            setRating(p.rating);
+                            setImageUrl(p.imageUrl);
+                          }}
+                          className="button-small"
+                        >
+                          Редактировать
+                        </button>
+                      }
+
+                      <button
+                        onClick={() => onDelete(p.id)}
+                        className={`button-small ${editingId === p.id ? "button-small--disabled" : ""}`}
+                        disabled={editingId === p.id}
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </section>
     </div>
   );

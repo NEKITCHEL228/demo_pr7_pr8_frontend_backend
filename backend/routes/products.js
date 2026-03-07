@@ -36,6 +36,8 @@ const router = express.Router();
  *       required:
  *         - title
  *         - price
+ *         - description
+ *         - category
  *       properties:
  *         id:
  *           type: string
@@ -96,6 +98,23 @@ const router = express.Router();
  *   { error: "code", message: "Сообщение на русском" }
  */
 
+/**
+ * @swagger
+ * /api/products:
+ *   get:
+ *     summary: Возвращает список товаров
+ *     tags: [Products]
+ *     responses:
+ *       200:
+ *         description: Список товаров
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Product'
+ */
+
 // GET /api/products — список товаров (публичный)
 router.get("/", async (req, res, next) => {
   try {
@@ -105,6 +124,36 @@ router.get("/", async (req, res, next) => {
     next(err);
   }
 });
+
+/**
+ * @swagger
+ * /api/products/{id}:
+ *  get:
+ *    summary: Возвращает товар по ID
+ *    tags: [Products]
+ *    security:
+ *     - bearerAuth: []
+ *    parameters:
+ *      - in: path
+ *        name: id
+ *        schema:
+ *          type: string
+ *          minLenght: 8
+ *          maxLenght: 8
+ *          example: 7pdGxNSBht
+ *        required: true
+ *        description: Индетификатор товара
+ *    responses:
+ *      200:
+ *        description: Товар
+ *        content: 
+ *          application/json:
+ *            schema:
+ *              type: object
+ *              $ref: '#/components/schemas/Product'
+ *      404:
+ *        description: Товар не найден
+ */
 
 // GET /api/products/:id — один товар (защищённый)
 router.get("/:id", authMiddleware, async (req, res, next) => {
@@ -119,6 +168,48 @@ router.get("/:id", authMiddleware, async (req, res, next) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/products:
+ *   post:
+ *     summary: Создаёт новый товар
+ *     tags: [Products]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - price
+ *               - stock
+ *             properties:
+ *               title:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *               stock:
+ *                 type: integer
+ *               rating:
+ *                 type: number
+ *               imageUrl:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Товар успешно создан
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Product'
+ *       400:
+ *         description: Ошибка в теле запроса
+ */
+
 // POST /api/products — добавить товар (публичный)
 router.post("/", async (req, res, next) => {
   try {
@@ -126,7 +217,15 @@ router.post("/", async (req, res, next) => {
 
     // TODO (студентам): полноценная валидация, иначе можно сохранить "мусор"
     if (typeof title !== "string" || title.trim() === "") {
-      return res.status(400).json({ error: "validation_error", message: "Поле title обязательно (строка)" });
+      return res.status(400).json({ error: "title is required (string)", message: "title обязателен и должен быть строкой" });
+    }
+
+    if (typeof price !== "number" || price.toString().trim() === "") {
+      return res.status(400).json({ error: "price is required (number)", message: "price обязателен и должен быть числом" })
+    }
+
+    if (typeof stock !== "number" || stock.toString().trim() === "") {
+      return res.status(400).json({ error: "stock is required (number)", message: "stock обязателен и должен быть числом" })
     }
 
     const newProduct = {
@@ -147,6 +246,61 @@ router.post("/", async (req, res, next) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/products/{id}:
+ *   put:
+ *     summary: Заменяет существующий товар
+ *     tags: [Products]
+ *     parameters:
+ *      - in: path
+ *        name: id
+ *        schema:
+ *          type: string
+ *          minLenght: 8
+ *          maxLenght: 8
+ *          example: 7pdGxNSBht
+ *        required: true
+ *        description: Индетификатор товара
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - price
+ *               - stock
+ *               - category
+ *               - description
+ *               - rating
+ *             properties:
+ *               title:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *               stock:
+ *                 type: integer
+ *               rating:
+ *                 type: number
+ *               imageUrl:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Товар успешно заменен
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Product'
+ *       404:
+ *         description: Товар не найден
+ */
+
 // PUT /api/products/:id — полное обновление (защищённый маршрут в Практике 8)
 router.put("/:id", authMiddleware, async (req, res, next) => {
   try {
@@ -155,11 +309,59 @@ router.put("/:id", authMiddleware, async (req, res, next) => {
     const updated = await productsStore.patch(req.params.id, req.body);
 
     if (!updated) return res.status(404).json({ error: "product_not_found", message: "Товар не найден" });
-    res.json(updated);
+    res.status(201).json(updated);
   } catch (err) {
     next(err);
   }
 });
+
+/**
+ * @swagger
+ * /api/products/{id}:
+ *   patch:
+ *     summary: Изменяет существующий товар
+ *     tags: [Products]
+ *     parameters:
+ *      - in: path
+ *        name: id
+ *        schema:
+ *          type: string
+ *          minLenght: 8
+ *          maxLenght: 8
+ *          example: 7pdGxNSBht
+ *        required: true
+ *        description: Индетификатор товара
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *               stock:
+ *                 type: integer
+ *               rating:
+ *                 type: number
+ *               imageUrl:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Товар успешно изменен
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Product'
+ *       404:
+ *         description: Товар не найден
+ */
 
 // PATCH /api/products/:id — частичное обновление (СЕЙЧАС НЕ ЗАЩИЩЁН, как TODO для Практики 8)
 router.patch("/:id", async (req, res, next) => {
@@ -167,11 +369,36 @@ router.patch("/:id", async (req, res, next) => {
     const updated = await productsStore.patch(req.params.id, req.body);
 
     if (!updated) return res.status(404).json({ error: "product_not_found", message: "Товар не найден" });
-    res.json(updated);
+    res.status(201).json(updated);
   } catch (err) {
     next(err);
   }
 });
+
+/**
+ * @swagger
+ * /api/products/{id}:
+ *   delete:
+ *     summary: Удаляет существующий товар
+ *     tags: [Products]
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *      - in: path
+ *        name: id
+ *        schema:
+ *          type: string
+ *          minLenght: 8
+ *          maxLenght: 8
+ *          example: 7pdGxNSBht
+ *        required: true
+ *        description: Индетификатор товара
+ *     responses:
+ *       204:
+ *         description: Товар успешно удален
+ *       404:
+ *         description: Товар не найден
+ */
 
 // DELETE /api/products/:id — удалить товар (защищённый)
 router.delete("/:id", authMiddleware, async (req, res, next) => {
@@ -180,8 +407,7 @@ router.delete("/:id", authMiddleware, async (req, res, next) => {
 
     if (!ok) return res.status(404).json({ error: "product_not_found", message: "Товар не найден" });
 
-    // Обычно делают 204 No Content, но для наглядности вернём JSON
-    res.json({ ok: true });
+    res.status(204).send();
   } catch (err) {
     next(err);
   }

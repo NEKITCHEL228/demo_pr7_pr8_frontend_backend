@@ -16,13 +16,49 @@ const router = express.Router();
  * - В реальных проектах вместо users[] будет БД (Postgres, Mongo, SQLite) или файл.
  * - В users[] мы НЕ храним пароль, только bcrypt-хеш (passwordHash).
  */
+
+/**
+ * @swagger
+ * components:
+ *  schemas:
+ *       User:
+ *        type: object
+ *        required:
+ *          - email
+ *          - first_name
+ *          - last_name
+ *          - password
+ *        properties:
+ *          id:
+ *            type: string
+ *            description: Уникальный ID пользователя
+ *          email:
+ *            type: string
+ *            description: Email пользователя
+ *          first_name:
+ *            type: string
+ *            description: Имя пользователя
+ *          last_name:
+ *            type: string
+ *            description: Фамилия пользователя
+ *          password:
+ *            type: string
+ *            description: Хэшированный пароль пользователя
+ *        example:
+ *          id: "u1"
+ *          email: "user@example.com"
+ *          first_name: "Иван"
+ *          last_name: "Иванов"
+ *          password: "hashed_password"
+ */
+
 const users = [];
 
 /**
  * @swagger
  * tags:
  *   - name: Auth
- *     description: Регистрация и вход (практики 7–8)
+ *     description: Регистрация и вход
  */
 
 /**
@@ -55,17 +91,40 @@ router.post("/register", async (req, res) => {
   // req.body появляется благодаря app.use(express.json()) в app.js
   const { email, first_name, last_name, password } = req.body;
 
+  // Убираем ведущие/концевые пробелы из имени/фамилии и приводим email к lowercase
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const trimmedFirstName = String(first_name || "").trim();
+  const trimmedLastName = String(last_name || "").trim();
+  const rawPassword = String(password || "");
+
   // 2) Минимальная валидация: все поля обязательны
-  // TODO студентам: валидировать email-формат, длину пароля, пробелы и т.д.
-  if (!email || !first_name || !last_name || !password) {
+  // - Email должен быть валидным
+  // - Пароль должен быть достаточно длинным
+  // - Имя/фамилия не должны быть пустыми после тримминга
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!normalizedEmail || !trimmedFirstName || !trimmedLastName || !rawPassword) {
     return res.status(400).json({
       error: "validation_error",
       message: "Нужны поля: email, first_name, last_name, password",
     });
   }
 
+  if (!emailRegex.test(normalizedEmail)) {
+    return res.status(400).json({
+      error: "validation_error",
+      message: "Неправильный формат email",
+    });
+  }
+
+  if (rawPassword.length < 6) {
+    return res.status(400).json({
+      error: "validation_error",
+      message: "Пароль должен содержать не менее 6 символов",
+    });
+  }
+
   // 3) Проверяем, что пользователь с таким email ещё не зарегистрирован
-  const normalizedEmail = String(email).toLowerCase();
   const exists = users.find((u) => u.email === normalizedEmail);
   if (exists) {
     return res.status(400).json({
@@ -87,9 +146,9 @@ router.post("/register", async (req, res) => {
   const passwordHash = await bcrypt.hash(String(password), 10);
   // 10 — cost factor; определяет, насколько вычисление хеша будет тяжёлым.
   //	•	8 — быстрее;
-	//  •	10 — стандартно;
-	//  •	12 — медленнее;
-	//  •	14 — ещё тяжелее.
+  //  •	10 — стандартно;
+  //  •	12 — медленнее;
+  //  •	14 — ещё тяжелее.
 
   // 5) Создаём пользователя (id — случайный)
   const user = {
@@ -181,7 +240,7 @@ router.post("/login", async (req, res) => {
     { expiresIn: "15m" }
   );
 
-// JWT_SECRET - Это ключ подписи.
+  // JWT_SECRET - Это ключ подписи.
 
   return res.json({ accessToken });
 });
@@ -199,7 +258,10 @@ router.post("/login", async (req, res) => {
  *         description: Пользователь
  *       401:
  *         description: Нет токена или токен невалиден
+ *       404:
+ *         description: Пользователь не найден
  */
+
 router.get("/me", authMiddleware, (req, res) => {
   // authMiddleware уже проверил JWT и положил payload в req.user
   // req.user = { sub, email, iat, exp }
