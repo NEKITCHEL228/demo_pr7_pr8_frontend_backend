@@ -12,7 +12,7 @@ module.exports = [
     price: 79,
     stock: 20,
     rating: 4.6,
-    imageUrl: ""
+    imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvVKv44o91oykYyMd1cnPPkb8UmNpRgU6XKg&s"
   },
   {
     id: "p2",
@@ -22,7 +22,7 @@ module.exports = [
     price: 99,
     stock: 15,
     rating: 4.3,
-    imageUrl: ""
+    imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvVKv44o91oykYyMd1cnPPkb8UmNpRgU6XKg&s"
   },
   {
     id: "p3",
@@ -32,6 +32,6 @@ module.exports = [
     price: 59,
     stock: 30,
     rating: 4.1,
-    imageUrl: ""
+    imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-NF_Rl-5TFKTWRdAE7XbB0Yfri8W-bCICng&s"
   }
 ];

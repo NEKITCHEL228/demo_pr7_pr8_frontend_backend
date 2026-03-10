@@ -105,6 +105,7 @@ body {
 .container {
   max-width: 1260px;
   display: flex;
+  flex-direction: column;
   margin: 0 auto;
   gap: 22px;
   width: 100%;
@@ -258,11 +259,15 @@ body {
       transform: none;
     }
   }
+
+  &--active {
+    background: darken($color-primary, 10%);
+  }
 }
 
 // List styles
 .list {
-  max-width: 1260px;
+  max-width: 100%;
   margin: 20px auto;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -276,30 +281,87 @@ body {
   text-decoration: none;
   padding: 15px;
   border-radius: $radius;
-  gap: 15px;
-  flex-wrap: wrap;
-  aspect-ratio: 1 / 1;
-  background-size: cover;
-  background-position: center;
+  gap: 5px;
+  display: flex;
+  flex-direction: column;
+  min-height: 500px;
+}
 
-  &__placeholder {
-    background: $img-zaglushka center/cover no-repeat;
+.product-card {
+  background: $color-surface;
+  border-radius: $radius;
+  padding: $product-card-padding;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+  flex: 1;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
   }
 
-  &__image {
-    background-color: $color-surface; // fallback if URL fails
-  }
-
-  &__wrap {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    height: 100%;
+  img {
     width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: $radius;
+    transition: transform 0.3s ease;
+
+    &:hover {
+      transform: scale(1.05);
+    }
   }
 
-  b {
-    font-size: 24px;
+  .product-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: $color-text;
+  }
+
+  .product-category {
+    margin: 0;
+    font-size: 14px;
+    color: rgba(245, 245, 245, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .product-description {
+    margin: 0;
+    font-size: 16px;
+    color: rgba(245, 245, 245, 0.9);
+    line-height: 1.4;
+    flex-grow: 1;
+  }
+
+  .product-rating {
+    font-size: 16px;
+    color: #ffd700; // золотой цвет для звезд
+  }
+
+  .product-price-stock {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+
+    .product-price {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: $color-primary;
+    }
+
+    .product-stock {
+      margin: 0;
+      font-size: 14px;
+      color: rgba(245, 245, 245, 0.7);
+    }
   }
 }
 
@@ -333,10 +395,18 @@ body {
   color: rgba(245, 245, 245, 0.8);
 }
 
-.btn {
-  @include button($color-primary);
+.profile {
+  text-align: center;
 
-  &:hover {
-    filter: brightness(1.05);
+  p {
+    margin: 10px 0;
+    font-size: 18px;
   }
+}
+
+.auth-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
 }
