@@ -3,7 +3,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { nanoid } = require("nanoid");
 
-const { authMiddleware, JWT_SECRET } = require("../middleware/authJwt");
+const { authMiddleware, JWT_SECRET, REFRESH_SECRET, ACCESS_EXPIRES_IN, REFRESH_EXPIRES_IN } = require("../middleware/authJwt");
 
 const router = express.Router();
 
@@ -53,6 +53,38 @@ const router = express.Router();
  */
 
 const users = [];
+// Практика 9: хранилище refresh-токенов в памяти процесса (учебный вариант).
+const refreshTokens = new Set();
+
+/**
+ * Практика 9: генерация accessToken и refreshToken
+ * - accessToken: короткий срок жизни (ACCESS_EXPIRES_IN), используется для Authorization: Bearer ...
+ * - refreshToken: более долгий срок жизни (REFRESH_EXPIRES_IN), используется только для обновления пары токенов
+ *
+ * Важно:
+ * - access и refresh подписываются РАЗНЫМИ секретами (JWT_SECRET и REFRESH_SECRET),
+ *   чтобы нельзя было использовать refresh как access (и наоборот).
+ */
+function generateAccessToken(user) {
+  return jwt.sign(
+    { sub: user.id, email: user.email },
+    JWT_SECRET,
+    { expiresIn: ACCESS_EXPIRES_IN }
+  );
+}
+// expiresIn: ACCESS_EXPIRES_IN - это TTL (время жизни) accessToken - задаем в AuthGwt.js
+//const ACCESS_EXPIRES_IN = process.env.ACCESS_EXPIRES_IN || "15m";
+
+function generateRefreshToken(user) {
+  return jwt.sign(
+    { sub: user.id, email: user.email },
+    REFRESH_SECRET,
+    { expiresIn: REFRESH_EXPIRES_IN }
+  );
+}
+// expiresIn: REFRESH_EXPIRES_IN - это TTL (время жизни) refreshToken - задаем в AuthGwt.js
+// const REFRESH_EXPIRES_IN = process.env.REFRESH_EXPIRES_IN || "7d"; 
+
 
 /**
  * @swagger
@@ -226,23 +258,119 @@ router.post("/login", async (req, res) => {
     });
   }
 
-  // 4) JWT — это токен, который клиент кладёт в заголовок:
-  // Authorization: Bearer <token>
-  //
-  // payload (то что попадет в токен):
-  // - sub (subject) = id пользователя
-  // - email = для удобства
-  //
-  // expiresIn: "15m" — токен протухнет через 15 минут (токен с ограниченным сроком дейтсвия)
-  const accessToken = jwt.sign(
-    { sub: user.id, email: user.email },
-    JWT_SECRET,
-    { expiresIn: "15m" }
-  );
+  /** 
+   * Практика 9 (главное изменение):
+   * - login теперь выдаёт ПАРУ токенов: accessToken + refreshToken
+   * - refreshToken нужен, чтобы получать новый accessToken без повторного логина
+   * - refreshToken мы сохраняем в refreshTokens (Set), чтобы можно было:
+   *   - проверять, что токен не "отозван"
+   *   - делать ротацию токенов в /refresh (старый удалить, новый выдать)
+   */
+  const accessToken = generateAccessToken(user)
+  const refreshToken = generateRefreshToken(user)
 
-  // JWT_SECRET - Это ключ подписи.
+  refreshTokens.add(refreshToken)
 
-  return res.json({ accessToken });
+  return res.json({ accessToken, refreshToken });
+});
+
+/**
+ * @swagger
+ * /api/auth/refresh:
+ *   post:
+ *     summary: Обновление пары токенов (access + refresh)
+ *     description: Принимает refresh-токен и возвращает новую пару токенов.
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: header
+ *         name: x-refresh-token
+ *         required: false
+ *         schema: { type: string }
+ *         description: Refresh-токен (учебный вариант). Можно также передать в body как refreshToken.
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken: { type: string }
+ *     responses:
+ *       200:
+ *         description: Новая пара токенов
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 accessToken: { type: string }
+ *                 refreshToken: { type: string }
+ *       400:
+ *         description: Не передан refresh-токен
+ *       401:
+ *         description: Refresh-токен невалиден/протух/не найден
+ */
+router.post("/refresh", (req, res) => {
+  /**
+   * Практика 9: refresh-токен
+   *
+   * По заданию refreshToken обычно передают из заголовков.
+   * Для удобства проверки в Swagger/Postman поддерживаем два варианта:
+   * 1) Заголовок: x-refresh-token: <token>
+   * 2) Тело запроса: { "refreshToken": "<token>" }
+   */
+  const headerToken = req.headers["x-refresh-token"];
+  const refreshToken = headerToken || req.body?.refreshToken;
+
+  if (!refreshToken) {
+    return res.status(400).json({
+      error: "refresh_token_required",
+      message: "Нужен refreshToken (в заголовке x-refresh-token или в теле запроса)",
+    });
+  }
+
+  // 1) Проверяем, что refreshToken есть в нашем "хранилище" (Set).
+  // Это позволяет отбрасывать старые/украденные/отозванные токены.
+  if (!refreshTokens.has(refreshToken)) {
+    return res.status(401).json({
+      error: "invalid_refresh_token",
+      message: "Refresh-токен недействителен (не найден в хранилище)",
+    });
+  }
+
+  try {
+    // 2) Проверяем подпись и срок действия refresh-токена.
+    // Важно: refresh проверяется через REFRESH_SECRET (а не JWT_SECRET).
+    const payload = jwt.verify(refreshToken, REFRESH_SECRET);
+
+    // 3) Находим пользователя
+    const user = users.find((u) => u.id === payload.sub);
+    if (!user) {
+      return res.status(401).json({
+        error: "user_not_found",
+        message: "Пользователь не найден",
+      });
+    }
+
+    // 4) Ротация refresh-токена (Практика 9):
+    // - старый refresh удаляем
+    // - выдаём новый refresh и сохраняем его
+    refreshTokens.delete(refreshToken);
+
+    const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+
+    refreshTokens.add(newRefreshToken);
+
+    return res.json({ accessToken: newAccessToken, refreshToken: newRefreshToken });
+  } catch (err) {
+    // Если токен протух или подделан — удаляем его из Set (на всякий случай)
+    refreshTokens.delete(refreshToken);
+    return res.status(401).json({
+      error: "refresh_token_invalid_or_expired",
+      message: "Refresh-токен недействителен или срок действия истёк",
+    });
+  }
 });
 
 /**

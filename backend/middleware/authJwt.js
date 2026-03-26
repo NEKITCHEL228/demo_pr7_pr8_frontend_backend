@@ -13,6 +13,26 @@ const JWT_SECRET = process.env.JWT_SECRET || "access_secret";
 //берём process.env.JWT_SECRET, если он задан, иначе используем строку по умолчанию "access_secret"
 
 /**
+ * REFRESH_SECRET — отдельный секрет для REFRESH токена (Практика 9).
+ * Зачем отдельный:
+ * - чтобы refresh нельзя было использовать как access
+ * - чтобы проверка refresh была отделена от проверки access
+ */
+const REFRESH_SECRET = process.env.REFRESH_SECRET || "refresh_secret"
+
+/**
+ * Срок жизни токенов (формат, который понимает jsonwebtoken):
+ * - "15m" = 15 минут
+ * - "7d"  = 7 дней
+ *
+ * Практика 9:
+ * - accessToken короткий (часто обновляется)
+ * - refreshToken длинный (нужен для автоматического перевыпуска accessToken)
+ */
+const ACCESS_EXPIRES_IN = process.env.ACCESS_EXPIRES_IN || "15m";
+const REFRESH_EXPIRES_IN = process.env.REFRESH_EXPIRES_IN || "7d";
+
+/**
  * authMiddleware — "охранник" перед защищёнными маршрутами.
  *
  * Что он проверяет:
@@ -64,4 +84,4 @@ function authMiddleware(req, res, next) {
   }
 }
 
-module.exports = { authMiddleware, JWT_SECRET };
+module.exports = { authMiddleware, JWT_SECRET, REFRESH_SECRET, ACCESS_EXPIRES_IN, REFRESH_EXPIRES_IN };
