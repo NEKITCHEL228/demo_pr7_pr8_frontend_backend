@@ -1,18 +1,42 @@
-const ProductCard = ({ product }) => {
+import { deleteProduct, updateProduct } from "../api/productsApi";
+import "../styles/ProductCard.scss";
+import load from "../App"
+
+const ProductCard = ({ product, editBars }) => {
   const renderStars = (rating) => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
-      stars.push(i <= rating ? '★' : '☆');
+      stars.push(i <= rating ? "★" : "☆");
     }
-    return stars.join('');
+    return stars.join("");
   };
+
+  async function onDelete(id) {
+    try {
+      await deleteProduct(id);
+      await load();
+    } catch (e) {
+
+    }
+  }
+
+  async function onEdit(p) {
+    editBars.setEditingId(p.id);
+    editBars.setTitle(p.title);
+    editBars.setPrice(p.price);
+    editBars.setCategory(p.category);
+    editBars.setDescription(p.description);
+    editBars.setStock(p.stock);
+    editBars.setRating(p.rating);
+    editBars.setImageUrl(p.imageUrl);
+  }
 
   return (
     <div className="product-card">
       <img
         src={product.imageUrl}
         alt={product.title}
-        onError={(e) => e.target.src = '../images/zaglushka.jpg'}
+        onError={(e) => (e.target.src = "../images/zaglushka.jpg")}
       />
       <h3 className="product-title">{product.title}</h3>
       <p className="product-category">Категория: {product.category}</p>
@@ -23,6 +47,19 @@ const ProductCard = ({ product }) => {
       <div className="product-price-stock">
         <p className="product-price">{product.price.toFixed(2)} ₽</p>
         <p className="product-stock">В наличии: {product.stock} шт.</p>
+      </div>
+
+      <div className="product-actions">
+        <button className="button-small" onClick={() => onEdit(product)}>
+          Редактировать
+        </button>
+
+        <button
+          className="button-small danger"
+          onClick={() => onDelete(product.id)}
+        >
+          Удалить
+        </button>
       </div>
     </div>
   );
