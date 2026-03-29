@@ -1,6 +1,6 @@
 const express = require("express");
 const { nanoid } = require("nanoid");
-const { authMiddleware } = require("../middleware/authJwt");
+const { authMiddleware, requireRole } = require("../middleware/authJwt");
 
 // JSON-store (лекция 2): чтение/запись товаров в backend/data/products.json
 // Важно: products.json — локальное runtime-хранилище (в .gitignore), а стартовые данные — в products.seed.json
@@ -211,7 +211,7 @@ router.get("/:id", authMiddleware, async (req, res, next) => {
  */
 
 // POST /api/products — добавить товар (публичный)
-router.post("/", async (req, res, next) => {
+router.post("/", authMiddleware, requireRole("admin"), async (req, res, next) => {
   try {
     const { title, category, description, price, stock, rating, imageUrl } = req.body;
 
@@ -302,7 +302,7 @@ router.post("/", async (req, res, next) => {
  */
 
 // PUT /api/products/:id — полное обновление (защищённый маршрут в Практике 8)
-router.put("/:id", authMiddleware, async (req, res, next) => {
+router.put("/:id", authMiddleware, requireRole("admin"), async (req, res, next) => {
   try {
     // Учебный вариант: используем patch под капотом.
     // TODO (студентам): реализовать строгий PUT (обязательные поля и типы)
@@ -364,7 +364,7 @@ router.put("/:id", authMiddleware, async (req, res, next) => {
  */
 
 // PATCH /api/products/:id — частичное обновление (СЕЙЧАС НЕ ЗАЩИЩЁН, как TODO для Практики 8)
-router.patch("/:id", async (req, res, next) => {
+router.patch("/:id", authMiddleware, requireRole("admin"), async (req, res, next) => {
   try {
     const updated = await productsStore.patch(req.params.id, req.body);
 
@@ -401,7 +401,7 @@ router.patch("/:id", async (req, res, next) => {
  */
 
 // DELETE /api/products/:id — удалить товар (защищённый)
-router.delete("/:id", authMiddleware, async (req, res, next) => {
+router.delete("/:id", authMiddleware, requireRole("admin"), async (req, res, next) => {
   try {
     const ok = await productsStore.remove(req.params.id);
 

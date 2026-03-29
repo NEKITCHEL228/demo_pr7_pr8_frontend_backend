@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { register, login } from "../api/authApi";
+import { registerUser, loginUser, logoutUser, getMe } from "../api/authApi";
+import { getAccessToken, clearTokens } from "../api/apiClient"
 
-export default function Auth() {
+export default function Auth({ setMe }) {
   const navigate = useNavigate();
 
   const [authMode, setAuthMode] = useState("login");
@@ -14,36 +15,48 @@ export default function Auth() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
 
+  const [authLoading, setAuthLoading] = useState(false);
+
   async function onLogin(e) {
     e.preventDefault();
+    setAuthLoading(true);
     try {
-      const res = await login({ email, password });
-      localStorage.setItem("accessToken", res.accessToken);
-      localStorage.setItem("refreshToken", res.refreshToken);
+      await loginUser({ email, password });
+      const data = await getMe();
+      setMe(data);
       navigate("/");
-    } catch (e) {
-      setError("Ошибка входа");
+    } catch (e2) {
+      setError(String(e2?.response?.data?.message || e2?.message || e2));
+    }
+    finally {
+      setAuthLoading(false);
     }
   }
 
   async function onRegister(e) {
     e.preventDefault();
+    setAuthLoading(true);
     try {
-      await register({
+      await registerUser({
         email,
         password,
         first_name: firstName,
         last_name: lastName,
       });
 
-      const res = await login({ email, password });
-      localStorage.setItem("accessToken", res.accessToken);
-      localStorage.setItem("refreshToken", res.refreshToken);
+      await loginUser({ email, password });
+      const data = await getMe();
+      setMe(data);
       navigate("/");
-    } catch (e) {
-      setError("Ошибка регистрации");
+    } catch (e2) {
+      setError(String(e2?.response?.data?.message || e2?.message || e2));
+    }
+    finally {
+      setAuthLoading(false);
     }
   }
+
+
 
   return (
     <div className="page">
@@ -51,21 +64,21 @@ export default function Auth() {
         {authMode === "login" ? "Вход" : "Регистрация"}
       </h1>
 
+      {error && <p style={{ color: "red" }}>{error}</p>}
+
       <section className="navigation">
         <div className="auth-tabs">
           <button
-            className={`button-small ${
-              authMode === "login" ? "button--active" : ""
-            }`}
+            className={`button-small ${authMode === "login" ? "button--active" : ""
+              }`}
             onClick={() => setAuthMode("login")}
           >
             Вход
           </button>
 
           <button
-            className={`button-small ${
-              authMode === "register" ? "button--active" : ""
-            }`}
+            className={`button-small ${authMode === "register" ? "button--active" : ""
+              }`}
             onClick={() => setAuthMode("register")}
           >
             Регистрация

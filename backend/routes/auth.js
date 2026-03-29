@@ -52,7 +52,8 @@ const router = express.Router();
  *          password: "hashed_password"
  */
 
-const users = [];
+const { users } = require("../store/usersStore");
+
 // Практика 9: хранилище refresh-токенов в памяти процесса (учебный вариант).
 const refreshTokens = new Set();
 
@@ -65,19 +66,19 @@ const refreshTokens = new Set();
  * - access и refresh подписываются РАЗНЫМИ секретами (JWT_SECRET и REFRESH_SECRET),
  *   чтобы нельзя было использовать refresh как access (и наоборот).
  */
+
 function generateAccessToken(user) {
-  return jwt.sign(
-    { sub: user.id, email: user.email },
+  return jwt.sign({ sub: user.id, email: user.email, role: user.role }, // <-- роль в accessToken
     JWT_SECRET,
     { expiresIn: ACCESS_EXPIRES_IN }
   );
 }
+
 // expiresIn: ACCESS_EXPIRES_IN - это TTL (время жизни) accessToken - задаем в AuthGwt.js
 //const ACCESS_EXPIRES_IN = process.env.ACCESS_EXPIRES_IN || "15m";
 
 function generateRefreshToken(user) {
-  return jwt.sign(
-    { sub: user.id, email: user.email },
+  return jwt.sign({ sub: user.id, email: user.email, role: user.role },
     REFRESH_SECRET,
     { expiresIn: REFRESH_EXPIRES_IN }
   );
@@ -189,6 +190,7 @@ router.post("/register", async (req, res) => {
     first_name: String(first_name),
     last_name: String(last_name),
     passwordHash, // ВАЖНО: храним только хеш, не пароль
+    role: users.length === 0 ? "admin" : "user",
   };
 
   // 6) Сохраняем в "учебное хранилище" (память)
@@ -208,7 +210,7 @@ router.post("/register", async (req, res) => {
  * /api/auth/login:
  *   post:
  *     summary: Вход в систему
- *     description: Проверяет пароль и возвращает accessToken (JWT).
+ *     description: Проверяет пароль и возвращает пару токенов (access + refresh).
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -223,6 +225,8 @@ router.post("/register", async (req, res) => {
  *     responses:
  *       200:
  *         description: Успешный вход (JWT выдан)
+ *       400:
+ *         description: Некоректные данные (не хватает email/password)
  *       401:
  *         description: Неверные учётные данные
  */
@@ -266,10 +270,10 @@ router.post("/login", async (req, res) => {
    *   - проверять, что токен не "отозван"
    *   - делать ротацию токенов в /refresh (старый удалить, новый выдать)
    */
-  const accessToken = generateAccessToken(user)
-  const refreshToken = generateRefreshToken(user)
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
 
-  refreshTokens.add(refreshToken)
+  refreshTokens.add(refreshToken);
 
   return res.json({ accessToken, refreshToken });
 });
@@ -410,6 +414,7 @@ router.get("/me", authMiddleware, (req, res) => {
     email: user.email,
     first_name: user.first_name,
     last_name: user.last_name,
+    role: user.role
   });
 });
 

@@ -84,4 +84,17 @@ function authMiddleware(req, res, next) {
   }
 }
 
-module.exports = { authMiddleware, JWT_SECRET, REFRESH_SECRET, ACCESS_EXPIRES_IN, REFRESH_EXPIRES_IN };
+function requireRole(requiredRole) {
+  return (req, res, next) => {
+    const actualRole = req.user?.role;
+    if (actualRole !== requiredRole) {
+      return res.status(403).json({
+        error: "forbidden",
+        message: `Доступ запрещён. Нужна роль: ${requiredRole}`,
+      });
+    }
+    next();
+  };
+}
+
+module.exports = { authMiddleware, requireRole, JWT_SECRET, REFRESH_SECRET, ACCESS_EXPIRES_IN, REFRESH_EXPIRES_IN };

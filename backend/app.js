@@ -9,6 +9,7 @@ const swaggerUi = require("swagger-ui-express");
 const logger = require("./middleware/logger");
 const productsRouter = require("./routes/products");
 const authRouter = require("./routes/auth");
+const adminRouter = require("./routes/admin");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -89,6 +90,7 @@ app.get("/", (req, res) => {
  */
 app.use("/api/auth", authRouter);
 app.use("/api/products", productsRouter);
+app.use("/api/admin", adminRouter)
 
 // Error handler: если в async-роуте случилась ошибка — вернём 500, а не “упадём”
 app.use((err, req, res, next) => {

@@ -1,8 +1,7 @@
 import { deleteProduct, updateProduct } from "../api/productsApi";
 import "../styles/ProductCard.scss";
-import load from "../App"
 
-const ProductCard = ({ product, editBars }) => {
+const ProductCard = ({ onSaved, product, editBars }) => {
   const renderStars = (rating) => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -11,12 +10,12 @@ const ProductCard = ({ product, editBars }) => {
     return stars.join("");
   };
 
-  async function onDelete(id) {
+  async function handleDelete(id) {
     try {
       await deleteProduct(id);
-      await load();
-    } catch (e) {
-
+      onSaved?.();
+    } catch (err) {
+      console.error(err);
     }
   }
 
@@ -49,18 +48,18 @@ const ProductCard = ({ product, editBars }) => {
         <p className="product-stock">В наличии: {product.stock} шт.</p>
       </div>
 
-      <div className="product-actions">
+      {editBars ? <div className="product-actions">
         <button className="button-small" onClick={() => onEdit(product)}>
           Редактировать
         </button>
 
         <button
           className="button-small danger"
-          onClick={() => onDelete(product.id)}
+          onClick={() => handleDelete(product.id)}
         >
           Удалить
         </button>
-      </div>
+      </div> : ""}
     </div>
   );
 };

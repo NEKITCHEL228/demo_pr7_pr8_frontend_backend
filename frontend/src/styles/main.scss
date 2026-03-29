@@ -3,7 +3,7 @@
 $color-primary: #3498db;
 $color-bg: #111;
 $color-surface: #1b1b1b;
-$color-text: #f5f5f5; 
+$color-text: #f5f5f5;
 
 * {
   box-sizing: border-box;
@@ -99,7 +99,7 @@ input {
   background: $color-surface;
   padding: 20px;
   border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 
 .section {
@@ -154,4 +154,17 @@ input:focus {
   display: flex;
   gap: 10px;
   margin-bottom: 15px;
+}
+
+.user-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.user-card {
+  background-color: $color-surface;
+  padding: 14px;
+  border-radius: 12px;
 }

@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { deleteProduct, updateProduct, createProduct } from "../api/productsApi";
-import load from "../App"
 
 export default function ProductForm({
   title,
@@ -17,47 +16,33 @@ export default function ProductForm({
   setRating,
   imageUrl,
   setImageUrl,
-  onSubmit,
   editingId,
-  setEditingId
+  setEditingId,
+  onSaved
 }) {
   const canSubmit = useMemo(() => {
     return title && price > 0 && stock !== "";
   }, [title, price, stock]);
 
-  async function onSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-
-    const product = {
-      title,
-      price: Number(price),
-      stock: Number(stock),
-      category,
-      description,
-      rating: Number(rating),
-      imageUrl,
-    };
-
-    if (editingId) {
-      await updateProduct(editingId, product);
-    } else {
-      await createProduct(product);
+    try {
+      if (editingId) {
+        await updateProduct(editingId, { title, price, stock, category, description, rating, imageUrl });
+        setEditingId(null);
+      } else {
+        await createProduct({ title, price: Number(price), stock: Number(stock), category, description, rating: Number(rating), imageUrl });
+      }
+      setTitle(""); setPrice(""); setStock(""); setCategory("");
+      setDescription(""); setRating(""); setImageUrl("");
+      onSaved?.();
+    } catch (err) {
+      console.error(err);
     }
-
-    setTitle("");
-    setPrice("");
-    setStock("");
-    setCategory("");
-    setDescription("");
-    setRating("");
-    setImageUrl("");
-    setEditingId(null);
-
-    load();
   }
 
   return (
-    <form onSubmit={onSubmit} className="navigation__form">
+    <form onSubmit={handleSubmit} className="navigation__form">
       <input
         className="input-title"
         value={title}

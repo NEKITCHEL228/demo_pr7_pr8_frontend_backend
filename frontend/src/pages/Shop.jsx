@@ -4,8 +4,9 @@ import { getProducts } from "../api/productsApi";
 import ProductList from "../elements/ProductsList";
 import ProductForm from "../elements/ProductForm";
 
-export default function Shop() {
+export default function Shop({ me }) {
   const navigate = useNavigate();
+  const isAdmin = me?.role === "admin";
 
   const [products, setProducts] = useState([]);
 
@@ -19,7 +20,9 @@ export default function Shop() {
 
   const [editingId, setEditingId] = useState(null);
 
-  const editBars = {setEditingId, setTitle, setPrice, setStock, setCategory, setDescription, setRating, setImageUrl};
+  const editBars = isAdmin
+    ? { setEditingId, setTitle, setPrice, setStock, setCategory, setDescription, setRating, setImageUrl }
+    : null;
 
   async function load() {
     const data = await getProducts();
@@ -38,37 +41,31 @@ export default function Shop() {
         <button className="button" onClick={() => navigate("/profile")}>
           Перейти в профиль
         </button>
+        {isAdmin && (
+          <button className="button" onClick={() => navigate("/admin")}>
+            Управление пользователями
+          </button>
+        )}
       </section>
 
-      <section className="navigation">
-        <h2 className="navigation__title">Добавить товар</h2>
-
-        <ProductForm
-          {...{
-            title,
-            setTitle,
-            price,
-            setPrice,
-            stock,
-            setStock,
-            category,
-            setCategory,
-            description,
-            setDescription,
-            rating,
-            setRating,
-            imageUrl,
-            setImageUrl,
-            editingId,
-            setEditingId
-          }}
-        />
-      </section>
+      {isAdmin && (
+        <section className="navigation">
+          <h2 className="navigation__title">Добавить товар</h2>
+          <ProductForm
+            {...{
+              title, setTitle, price, setPrice, stock, setStock, category, setCategory,
+              description, setDescription, rating, setRating, imageUrl, setImageUrl,
+              editingId, setEditingId
+            }}
+            onSaved={load}
+          />
+        </section>
+      )}
 
       <section className="section">
         <h2 className="section__title">Список товаров</h2>
 
-        <ProductList products={products} editBars={editBars} />
+        <ProductList onSaved={load} products={products} editBars={editBars} />
       </section>
     </div>
   );

@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { me } from "../api/authApi";
+import { getMe, logoutUser } from "../api/authApi";
+import { } from "../api/apiClient";
 
-export default function Profile() {
-  const [user, setUser] = useState(null);
+export default function Profile({ me, setMe }) {
   const navigate = useNavigate();
 
   useEffect(() => {
     async function load() {
       try {
-        const data = await me();
-        setUser(data);
+        const data = await getMe();
+        setMe(data);
       } catch {
         navigate("/auth");
       }
@@ -18,12 +18,13 @@ export default function Profile() {
     load();
   }, []);
 
-  function logout() {
-    localStorage.removeItem("token");
+  function onLogout() {
+    logoutUser();
+    setMe(null);
     navigate("/auth");
   }
 
-  if (!user) return <p>Загрузка...</p>;
+  if (!me) return <p>Загрузка...</p>;
 
   return (
     <div className="page">
@@ -31,15 +32,15 @@ export default function Profile() {
 
       <section className="navigation profile">
         <p>
-          {user.first_name} {user.last_name}
+          {me.first_name} {me.last_name}
         </p>
-        <p>{user.email}</p>
+        <p>{me.email}</p>
 
         <button className="button" onClick={() => navigate("/")}>
           На главную
         </button>
 
-        <button className="button" onClick={logout}>
+        <button className="button" onClick={onLogout}>
           Выйти
         </button>
       </section>
